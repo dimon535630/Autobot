@@ -23,10 +23,24 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller pyinstaller-hooks-contrib
+          pip install pyinstaller
 
-      - name: Build EXE (all project assets + plugin modules)
-        run: python build_exe.py
+      - name: Build EXE
+        shell: pwsh
+        run: |
+          pyinstaller --noconfirm --clean --windowed --onefile --name FishingBot `
+            --add-data "ASK.mp3;." `
+            --add-data "AD.png;." `
+            --add-data "EZEFISH.jpg;." `
+            --add-data "q11.png;." `
+            --add-data "q12.png;." `
+            --add-data "1.png;." `
+            --add-data "otpustit.png;." `
+            --add-data "stop.png;." `
+            --add-data "knopkasebe.jpg;." `
+            --add-data "config.json;." `
+            --add-data "licenses.db;." `
+            launcher.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
