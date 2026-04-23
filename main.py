@@ -705,7 +705,7 @@ class FishingBot:
 
         return max_val >= threshold
 
-    def stop_bot_on_image(self, template_path, bbox=(306, 851, 363, 904), threshold=0.85):
+    def stop_bot_on_image(self, template_path, bbox=(306, 852, 476, 904), threshold=0.85):
         """
         Если картинка появилась в bbox — нажимает ESC, выключает бот и возвращает True.
         Иначе False.
