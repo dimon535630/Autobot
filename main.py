@@ -68,11 +68,6 @@ class FishingBot:
         self.flow_noise_threshold = 0.7
         self.flow_resize_enabled = True
         self.flow_resize_scale = 0.33
-        self.green_min_area = 264
-        self.slider_s_max = 30
-        self.slider_v_min = 216
-        self.slider_min_area = 30
-        self.space_trigger_threshold_px = 8
 
     def set_action_mode(self, mode):
         if mode not in ('take', 'release'):
@@ -168,26 +163,6 @@ class FishingBot:
         self.flow_resize_scale = min(1.0, max(0.20, float(value)))
         print(f"Масштаб кадра для optical flow: {self.flow_resize_scale:.2f}")
 
-    def set_green_min_area(self, value: float):
-        self.green_min_area = max(10, int(value))
-        print(f"Мин. площадь зелёной зоны: {self.green_min_area}")
-
-    def set_slider_s_max(self, value: float):
-        self.slider_s_max = max(0, min(255, int(value)))
-        print(f"Slider S max: {self.slider_s_max}")
-
-    def set_slider_v_min(self, value: float):
-        self.slider_v_min = max(0, min(255, int(value)))
-        print(f"Slider V min: {self.slider_v_min}")
-
-    def set_slider_min_area(self, value: float):
-        self.slider_min_area = max(5, int(value))
-        print(f"Мин. площадь ползунка: {self.slider_min_area}")
-
-    def set_space_trigger_threshold_px(self, value: float):
-        self.space_trigger_threshold_px = max(0, int(value))
-        print(f"Порог срабатывания space (px): {self.space_trigger_threshold_px}")
-
     def find_object(self, template_path):
         """Поиск изображения на экране."""
         screenshot = np.array(ImageGrab.grab())
@@ -245,7 +220,7 @@ class FishingBot:
         if not contours:
             return [], mask
 
-        contours = [c for c in contours if cv2.contourArea(c) > self.green_min_area]
+        contours = [c for c in contours if cv2.contourArea(c) > 264]
         contours.sort(key=cv2.contourArea, reverse=True)
 
         return contours, mask
@@ -259,8 +234,8 @@ class FishingBot:
         s = hsv[:, :, 1]
         v = hsv[:, :, 2]
 
-        s_max = self.slider_s_max
-        v_min = self.slider_v_min
+        s_max = 30
+        v_min = 216
 
         mask = ((s <= s_max) & (v >= v_min)).astype(np.uint8) * 255
 
@@ -279,7 +254,7 @@ class FishingBot:
 
         for c in contours:
             area = cv2.contourArea(c)
-            if area < self.slider_min_area:
+            if area < 30:
                 continue
 
             x, y, w, h = cv2.boundingRect(c)
@@ -407,8 +382,7 @@ class FishingBot:
                 # жмём заранее до входа в зелёную маску.
                 predicted_center = slider_center + velocity
                 near_zone = min(abs(slider_center - green_left), abs(slider_center - green_right)) <= lead_px
-                tol = self.space_trigger_threshold_px
-                will_enter_zone = (green_left - tol) <= predicted_center <= (green_right + tol)
+                will_enter_zone = green_left <= predicted_center <= green_right
 
                 if near_zone and will_enter_zone:
                     pyautogui.press('space')
@@ -778,21 +752,6 @@ class BotController:
 
     def set_flow_resize_scale(self, value: float):
         self.bot.set_flow_resize_scale(value)
-
-    def set_green_min_area(self, value: float):
-        self.bot.set_green_min_area(value)
-
-    def set_slider_s_max(self, value: float):
-        self.bot.set_slider_s_max(value)
-
-    def set_slider_v_min(self, value: float):
-        self.bot.set_slider_v_min(value)
-
-    def set_slider_min_area(self, value: float):
-        self.bot.set_slider_min_area(value)
-
-    def set_space_trigger_threshold_px(self, value: float):
-        self.bot.set_space_trigger_threshold_px(value)
 
     def exit_program(self):
         print("Выход: останавливаем бота и закрываем программу...")

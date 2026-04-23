@@ -158,8 +158,8 @@ class Launcher(tk.Tk):
     def __init__(self, license_manager: LicenseManager):
         super().__init__()
         self.title("Рыболовный помощник")
-        self.geometry("680x700")
-        self.minsize(640, 660)
+        self.geometry("620x520")
+        self.minsize(580, 500)
 
         self._hotkey_ids = []
         self.ctl = main.BotController()
@@ -172,11 +172,6 @@ class Launcher(tk.Tk):
         self.flow_noise_var = tk.DoubleVar(value=0.7)
         self.flow_resize_enabled_var = tk.BooleanVar(value=True)
         self.flow_resize_scale_var = tk.DoubleVar(value=0.33)
-        self.green_min_area_var = tk.DoubleVar(value=264)
-        self.slider_s_max_var = tk.DoubleVar(value=30)
-        self.slider_v_min_var = tk.DoubleVar(value=216)
-        self.slider_min_area_var = tk.DoubleVar(value=30)
-        self.space_trigger_threshold_var = tk.DoubleVar(value=8)
 
         self._configure_styles()
         self._build_ui()
@@ -296,24 +291,6 @@ class Launcher(tk.Tk):
         self.flow_resize_value_label = ttk.Label(flow_box, text="0.33", style="Hint.TLabel")
         self.flow_resize_value_label.pack(anchor="e")
 
-        zone_box = ttk.LabelFrame(root, text="Зелёная зона и ползунок", padding=12, style="Card.TLabelframe")
-        zone_box.pack(fill="x", pady=(0, 10))
-
-        ttk.Label(zone_box, text="Мин. площадь зелёной зоны", style="Card.TLabel").pack(anchor="w")
-        ttk.Scale(zone_box, from_=50, to=800, variable=self.green_min_area_var, command=self.on_green_min_area_change).pack(fill="x")
-
-        ttk.Label(zone_box, text="Slider S max", style="Card.TLabel").pack(anchor="w", pady=(6, 0))
-        ttk.Scale(zone_box, from_=0, to=120, variable=self.slider_s_max_var, command=self.on_slider_s_max_change).pack(fill="x")
-
-        ttk.Label(zone_box, text="Slider V min", style="Card.TLabel").pack(anchor="w", pady=(6, 0))
-        ttk.Scale(zone_box, from_=120, to=255, variable=self.slider_v_min_var, command=self.on_slider_v_min_change).pack(fill="x")
-
-        ttk.Label(zone_box, text="Мин. площадь ползунка", style="Card.TLabel").pack(anchor="w", pady=(6, 0))
-        ttk.Scale(zone_box, from_=5, to=200, variable=self.slider_min_area_var, command=self.on_slider_min_area_change).pack(fill="x")
-
-        ttk.Label(zone_box, text="Порог срабатывания SPACE (px)", style="Card.TLabel").pack(anchor="w", pady=(6, 0))
-        ttk.Scale(zone_box, from_=0, to=40, variable=self.space_trigger_threshold_var, command=self.on_space_trigger_threshold_change).pack(fill="x")
-
         ttk.Button(root, text="Reload config.json", command=self.on_reload).pack(fill="x", pady=(0, 10))
 
     def apply_config_to_bot(self, cfg: dict):
@@ -342,24 +319,6 @@ class Launcher(tk.Tk):
         self.ctl.set_flow_resize_enabled(flow_resize_enabled)
         self.ctl.set_flow_resize_scale(flow_resize_scale)
 
-        green_min_area = float(behavior.get("green_min_area", 264))
-        slider_s_max = float(behavior.get("slider_s_max", 30))
-        slider_v_min = float(behavior.get("slider_v_min", 216))
-        slider_min_area = float(behavior.get("slider_min_area", 30))
-        space_trigger_threshold_px = float(behavior.get("space_trigger_threshold_px", 8))
-
-        self.green_min_area_var.set(green_min_area)
-        self.slider_s_max_var.set(slider_s_max)
-        self.slider_v_min_var.set(slider_v_min)
-        self.slider_min_area_var.set(slider_min_area)
-        self.space_trigger_threshold_var.set(space_trigger_threshold_px)
-
-        self.ctl.set_green_min_area(green_min_area)
-        self.ctl.set_slider_s_max(slider_s_max)
-        self.ctl.set_slider_v_min(slider_v_min)
-        self.ctl.set_slider_min_area(slider_min_area)
-        self.ctl.set_space_trigger_threshold_px(space_trigger_threshold_px)
-
         self._refresh_flow_labels()
 
     def _refresh_flow_labels(self):
@@ -378,21 +337,6 @@ class Launcher(tk.Tk):
         value = float(self.flow_resize_scale_var.get())
         self.ctl.set_flow_resize_scale(value)
         self._refresh_flow_labels()
-
-    def on_green_min_area_change(self, _value=None):
-        self.ctl.set_green_min_area(self.green_min_area_var.get())
-
-    def on_slider_s_max_change(self, _value=None):
-        self.ctl.set_slider_s_max(self.slider_s_max_var.get())
-
-    def on_slider_v_min_change(self, _value=None):
-        self.ctl.set_slider_v_min(self.slider_v_min_var.get())
-
-    def on_slider_min_area_change(self, _value=None):
-        self.ctl.set_slider_min_area(self.slider_min_area_var.get())
-
-    def on_space_trigger_threshold_change(self, _value=None):
-        self.ctl.set_space_trigger_threshold_px(self.space_trigger_threshold_var.get())
 
     def setup_hotkeys(self, cfg: dict):
         self._clear_hotkeys()
