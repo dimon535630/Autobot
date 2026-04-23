@@ -1,6 +1,8 @@
 import functools
 import threading
 import time
+from pathlib import Path
+import sys
 import cv2
 import keyboard
 import numpy as np
@@ -10,7 +12,20 @@ import pygame
 from PIL import ImageGrab
 
 # Пути к файлам
-sound_file_path = 'ASK.mp3'
+
+
+def get_runtime_base_dir() -> Path:
+    if getattr(sys, 'frozen', False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
+def asset_path(filename: str) -> str:
+    assets_dir = get_runtime_base_dir() / 'assets'
+    return str((assets_dir / filename).resolve())
+
+
+sound_file_path = asset_path('ASK.mp3')
 
 # Инициализация звука (если не получится — просто отключим звук)
 SOUND_ENABLED = True
@@ -40,7 +55,7 @@ def prevent_reentry(method):
 class FishingBot:
     def __init__(self):
         self.bot_running = False
-        self.reward_button_template = 'knopkasebe.jpg'
+        self.reward_button_template = asset_path('knopkasebe.jpg')
         self.reward_button_name = "Забрать себе"
         self.post_cycle_reset_enabled = True
         self.cycle_limit = 7
@@ -116,8 +131,8 @@ class FishingBot:
     def set_reward_action(self, action: str):
         """Выбор кнопки после мини-игр: забрать себе / отпустить."""
         actions = {
-            "take": ('knopkasebe.jpg', "Забрать себе"),
-            "release": ('otpustit.png', "Отпустить"),
+            "take": (asset_path('knopkasebe.jpg'), "Забрать себе"),
+            "release": (asset_path('otpustit.png'), "Отпустить"),
         }
         template, name = actions.get(action, actions["take"])
         self.reward_button_template = template
@@ -315,7 +330,7 @@ class FishingBot:
         previous_slider_center = None
 
         while self.bot_running:
-            if self.stop_bot_on_image('stop.png'):
+            if self.stop_bot_on_image(asset_path('stop.png')):
                 return True
 
             screenshot = np.array(ImageGrab.grab())  # RGB
@@ -381,8 +396,8 @@ class FishingBot:
     @prevent_reentry
     def second_mini_game(self, show_roi=False):
         bubbles_images = [
-            cv2.imread('q11.png', cv2.IMREAD_GRAYSCALE),
-            cv2.imread('q12.png', cv2.IMREAD_GRAYSCALE),
+            cv2.imread(asset_path('q11.png'), cv2.IMREAD_GRAYSCALE),
+            cv2.imread(asset_path('q12.png'), cv2.IMREAD_GRAYSCALE),
         ]
 
         if any(img is None for img in bubbles_images):
@@ -466,7 +481,7 @@ class FishingBot:
         previous_frame = None
         current_key = None
 
-        finish_template = 'EZEFISH.jpg' if self.action_mode == 'take' else 'otpustit.png'
+        finish_template = asset_path('EZEFISH.jpg') if self.action_mode == 'take' else asset_path('otpustit.png')
         ad_bbox = (837, 1016, 912, 1057)
         ad_seen_in_roi = False
         ad_check_timeout = 30.0
@@ -476,10 +491,10 @@ class FishingBot:
         i = 0
         check_every = 5  # проверять шаблон раз в 5 циклов (подстрой: 5/10/15/20)
         while self.bot_running:
-            if self.stop_bot_on_image('stop.png'):
+            if self.stop_bot_on_image(asset_path('stop.png')):
                 return False
 
-            ad_present = self._template_in_region('AD.png', bbox=ad_bbox, threshold=0.85)
+            ad_present = self._template_in_region(asset_path('AD.png'), bbox=ad_bbox, threshold=0.85)
             if ad_present:
                 ad_seen_in_roi = True
             elif ad_seen_in_roi:
@@ -550,7 +565,7 @@ class FishingBot:
 
     def press_action_button(self, timeout=3.0, poll=1):
         """Нажатие кнопки действия в зависимости от режима (забрать/отпустить)."""
-        template_path = 'knopkasebe.jpg' if self.action_mode == 'take' else 'otpustit.png'
+        template_path = asset_path('knopkasebe.jpg') if self.action_mode == 'take' else asset_path('otpustit.png')
         button_name = "'Забрать себе'" if self.action_mode == 'take' else "'Отпустить'"
         start = time.time()
 
