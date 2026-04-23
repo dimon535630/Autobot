@@ -1,4 +1,5 @@
 import functools
+import random
 import threading
 import time
 from pathlib import Path
@@ -64,7 +65,6 @@ class FishingBot:
         self.action_mode = 'take'  # take | release
         self.reset_first_click_coords = (1035, 962)
         self.reset_second_click_coords = [(1042, 748), (1034, 816)]
-        self._reset_second_click_index = 0
         self.flow_noise_threshold = 0.7
         self.flow_resize_enabled = True
         self.flow_resize_scale = 0.33
@@ -650,10 +650,10 @@ class FishingBot:
 
         print(
             f"Достигнут лимит {self.cycle_limit} циклов. "
-            f"Выполняем ESC(2с) -> CLICK1(6с) -> CLICK2(6с, чередование) -> E(6с)."
+            f"Выполняем ESC(2с) -> CLICK1(6с) -> CLICK2(6с, рандом) -> E(6с)."
         )
 
-        second_click_coords = self.reset_second_click_coords[self._reset_second_click_index]
+        second_click_coords = random.choice(self.reset_second_click_coords)
         steps = [
             (2, 'key', 'esc'),
             (6, 'click', self.reset_first_click_coords),
@@ -675,7 +675,6 @@ class FishingBot:
                 pyautogui.click(x=x, y=y)
                 print(f"Сделан клик мышью в ({x}, {y}) (после {wait_seconds}с)")
 
-            self._reset_second_click_index = (self._reset_second_click_index + 1) % len(self.reset_second_click_coords)
 
 
     @prevent_reentry
