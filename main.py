@@ -68,6 +68,8 @@ class FishingBot:
         self.flow_noise_threshold = 0.7
         self.flow_resize_enabled = True
         self.flow_resize_scale = 0.33
+        self.lead_base_px = 9
+        self.lead_max_px = 50
 
     def set_action_mode(self, mode):
         if mode not in ('take', 'release'):
@@ -163,6 +165,16 @@ class FishingBot:
         self.flow_resize_scale = min(1.0, max(0.20, float(value)))
         print(f"Масштаб кадра для optical flow: {self.flow_resize_scale:.2f}")
 
+    def set_lead_base_px(self, value: float):
+        self.lead_base_px = max(1, int(value))
+        if self.lead_max_px < self.lead_base_px:
+            self.lead_max_px = self.lead_base_px
+        print(f"Базовое опережение lead_base_px: {self.lead_base_px}")
+
+    def set_lead_max_px(self, value: float):
+        self.lead_max_px = max(self.lead_base_px, int(value))
+        print(f"Максимальное опережение lead_max_px: {self.lead_max_px}")
+
     def find_object(self, template_path):
         """Поиск изображения на экране."""
         screenshot = np.array(ImageGrab.grab())
@@ -184,6 +196,19 @@ class FishingBot:
         if not shape or len(shape) < 2:
             return None
         return int(shape[0]), int(shape[1])
+
+    def _calc_dynamic_lead_px(self, velocity: int, lead_base_px: int, lead_max_px: int) -> int:
+        """Автоподстройка лид-пикселей по скорости ползунка."""
+        speed = abs(int(velocity))
+
+        if speed <= 2:
+            lead_px = lead_base_px + speed
+        elif speed <= 6:
+            lead_px = lead_base_px + speed * 2
+        else:
+            lead_px = lead_base_px + speed * 3
+
+        return min(lead_max_px, lead_px)
 
     def find_image_on_screen(self, template_path, threshold=0.8, use_blur=False):
         """Универсальный поиск с опциональным размытием."""
@@ -325,8 +350,8 @@ class FishingBot:
 
         ROI = (679, 878, 1243, 916)  # left, top, right, bottom
         # Чем больше скорость ползунка, тем раньше нажимаем.
-        lead_base_px = 9
-        lead_max_px = 36
+        lead_base_px = self.lead_base_px
+        lead_max_px = self.lead_max_px
         previous_slider_center = None
 
         while self.bot_running:
@@ -370,7 +395,7 @@ class FishingBot:
                     velocity = slider_center - previous_slider_center
 
                 # Раннее нажатие: чем быстрее ползунок, тем раньше срабатывание.
-                lead_px = min(lead_max_px, lead_base_px + abs(velocity) * 2)
+                lead_px = self._calc_dynamic_lead_px(velocity, lead_base_px, lead_max_px)
 
                 # Если уже в зоне — жмём сразу.
                 #if green_left <= slider_center <= green_right:
@@ -752,6 +777,12 @@ class BotController:
 
     def set_flow_resize_scale(self, value: float):
         self.bot.set_flow_resize_scale(value)
+
+    def set_lead_base_px(self, value: float):
+        self.bot.set_lead_base_px(value)
+
+    def set_lead_max_px(self, value: float):
+        self.bot.set_lead_max_px(value)
 
     def exit_program(self):
         print("Выход: останавливаем бота и закрываем программу...")

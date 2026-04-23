@@ -32,6 +32,12 @@ def load_config(path=CONFIG_PATH):
         return json.load(f)
 
 
+def save_config(cfg: dict, path=CONFIG_PATH):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+
+
 class LicensePanel(ttk.LabelFrame):
     def __init__(self, parent, license_manager: LicenseManager, on_status_change):
         super().__init__(parent, text="Лицензирование", padding=12, style="Card.TLabelframe")
@@ -110,10 +116,10 @@ class LicenseActivationWindow(tk.Tk):
         if "clam" in style.theme_names():
             style.theme_use("clam")
 
-        bg_main = "#0f131c"
-        bg_card = "#171e2a"
-        fg_primary = "#e7edf9"
-        fg_secondary = "#a8b3c6"
+        bg_main = "#101317"
+        bg_card = "#171b22"
+        fg_primary = "#f5f7fa"
+        fg_secondary = "#96a0ad"
 
         self.configure(bg=bg_main)
 
@@ -158,8 +164,8 @@ class Launcher(tk.Tk):
     def __init__(self, license_manager: LicenseManager):
         super().__init__()
         self.title("Рыболовный помощник")
-        self.geometry("620x520")
-        self.minsize(580, 500)
+        self.geometry("640x560")
+        self.minsize(620, 540)
 
         self._hotkey_ids = []
         self.ctl = main.BotController()
@@ -172,11 +178,14 @@ class Launcher(tk.Tk):
         self.flow_noise_var = tk.DoubleVar(value=0.7)
         self.flow_resize_enabled_var = tk.BooleanVar(value=True)
         self.flow_resize_scale_var = tk.DoubleVar(value=0.33)
+        self.lead_base_var = tk.DoubleVar(value=9)
+        self.lead_max_var = tk.DoubleVar(value=50)
 
         self._configure_styles()
         self._build_ui()
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
+        self._show_startup_loader()
         self.reload_config()
         self.sync_reset_options()
 
@@ -184,15 +193,34 @@ class Launcher(tk.Tk):
         self.after(1000, self.poll_license)
 
 
+    def _show_startup_loader(self):
+        self.withdraw()
+        splash = tk.Toplevel(self)
+        splash.overrideredirect(True)
+        splash.configure(bg="#101317")
+        splash.geometry("360x120+500+300")
+
+        ttk.Label(splash, text="FishingBot", style="Header.TLabel").pack(pady=(16, 6))
+        pb = ttk.Progressbar(splash, mode="indeterminate", length=260)
+        pb.pack(pady=(4, 12))
+        pb.start(10)
+
+        def _finish():
+            pb.stop()
+            splash.destroy()
+            self.deiconify()
+
+        self.after(900, _finish)
+
     def _configure_styles(self):
         style = ttk.Style(self)
         if "clam" in style.theme_names():
             style.theme_use("clam")
 
-        bg_main = "#0f131c"
-        bg_card = "#171e2a"
-        fg_primary = "#e7edf9"
-        fg_secondary = "#a8b3c6"
+        bg_main = "#101317"
+        bg_card = "#171b22"
+        fg_primary = "#f5f7fa"
+        fg_secondary = "#96a0ad"
 
         self.configure(bg=bg_main)
 
@@ -291,7 +319,16 @@ class Launcher(tk.Tk):
         self.flow_resize_value_label = ttk.Label(flow_box, text="0.33", style="Hint.TLabel")
         self.flow_resize_value_label.pack(anchor="e")
 
-        ttk.Button(root, text="Reload config.json", command=self.on_reload).pack(fill="x", pady=(0, 10))
+        ttk.Label(flow_box, text="lead_base_px", style="Card.TLabel").pack(anchor="w", pady=(6, 0))
+        ttk.Scale(flow_box, from_=1, to=30, variable=self.lead_base_var, command=self.on_lead_base_change).pack(fill="x")
+
+        ttk.Label(flow_box, text="lead_max_px", style="Card.TLabel").pack(anchor="w", pady=(6, 0))
+        ttk.Scale(flow_box, from_=20, to=120, variable=self.lead_max_var, command=self.on_lead_max_change).pack(fill="x")
+
+        actions = ttk.Frame(root, style="Main.TFrame")
+        actions.pack(fill="x", pady=(0, 10))
+        ttk.Button(actions, text="Сохранить настройки", command=self.on_save_config, style="Accent.TButton").pack(side="left", fill="x", expand=True, padx=(0, 6))
+        ttk.Button(actions, text="Reload config.json", command=self.on_reload).pack(side="left", fill="x", expand=True)
 
     def apply_config_to_bot(self, cfg: dict):
         sound = cfg.get("sound", {})
@@ -310,14 +347,20 @@ class Launcher(tk.Tk):
         flow_noise = float(behavior.get("flow_noise_threshold", 0.7))
         flow_resize_enabled = bool(behavior.get("flow_resize_enabled", True))
         flow_resize_scale = float(behavior.get("flow_resize_scale", 0.33))
+        lead_base_px = float(behavior.get("lead_base_px", 9))
+        lead_max_px = float(behavior.get("lead_max_px", 50))
 
         self.flow_noise_var.set(flow_noise)
         self.flow_resize_enabled_var.set(flow_resize_enabled)
         self.flow_resize_scale_var.set(flow_resize_scale)
+        self.lead_base_var.set(lead_base_px)
+        self.lead_max_var.set(lead_max_px)
 
         self.ctl.set_flow_noise_threshold(flow_noise)
         self.ctl.set_flow_resize_enabled(flow_resize_enabled)
         self.ctl.set_flow_resize_scale(flow_resize_scale)
+        self.ctl.set_lead_base_px(lead_base_px)
+        self.ctl.set_lead_max_px(lead_max_px)
 
         self._refresh_flow_labels()
 
@@ -337,6 +380,22 @@ class Launcher(tk.Tk):
         value = float(self.flow_resize_scale_var.get())
         self.ctl.set_flow_resize_scale(value)
         self._refresh_flow_labels()
+
+    def on_lead_base_change(self, _value=None):
+        self.ctl.set_lead_base_px(self.lead_base_var.get())
+
+    def on_lead_max_change(self, _value=None):
+        self.ctl.set_lead_max_px(self.lead_max_var.get())
+
+    def on_save_config(self):
+        behavior = self.cfg.setdefault("behavior", {})
+        behavior["flow_noise_threshold"] = round(float(self.flow_noise_var.get()), 3)
+        behavior["flow_resize_enabled"] = bool(self.flow_resize_enabled_var.get())
+        behavior["flow_resize_scale"] = round(float(self.flow_resize_scale_var.get()), 3)
+        behavior["lead_base_px"] = int(self.lead_base_var.get())
+        behavior["lead_max_px"] = int(self.lead_max_var.get())
+        save_config(self.cfg)
+        messagebox.showinfo("OK", "Настройки сохранены")
 
     def setup_hotkeys(self, cfg: dict):
         self._clear_hotkeys()
