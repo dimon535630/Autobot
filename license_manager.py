@@ -107,7 +107,7 @@ class LicenseManager:
                 WHERE id = 1
                 """,
                 (key_value, now.isoformat(), None),
-                            )
+            )
 
         return LicenseStatus(True, key_value, None)
 
@@ -124,7 +124,7 @@ class LicenseManager:
             return LicenseStatus(False, None, None)
 
         return LicenseStatus(True, row["active_key"], expires_at)
-        
+
     def deactivate(self) -> None:
         with self._connect() as conn:
-             conn.execute("UPDATE license_state SET active_key = NULL, activated_at = NULL, expires_at = NULL WHERE id = 1")
+            conn.execute("UPDATE license_state SET active_key = NULL, activated_at = NULL, expires_at = NULL WHERE id = 1")
