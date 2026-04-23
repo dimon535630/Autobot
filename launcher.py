@@ -1,8 +1,6 @@
 import json
 import tkinter as tk
 from datetime import timedelta
-from pathlib import Path
-import sys
 from tkinter import messagebox, ttk
 
 import keyboard
@@ -10,21 +8,7 @@ import keyboard
 import main
 from license_manager import LicenseManager
 
-def get_runtime_base_dir() -> Path:
-    if getattr(sys, 'frozen', False):
-        return Path(sys.executable).resolve().parent
-    return Path(__file__).resolve().parent
-
-
-def get_config_path() -> str:
-    return str((get_runtime_base_dir() / "config.json").resolve())
-
-
-def asset_path(filename: str) -> str:
-    return str((get_runtime_base_dir() / "assets" / filename).resolve())
-
-
-CONFIG_PATH = get_config_path()
+CONFIG_PATH = "config.json"
 
 
 def load_config(path=CONFIG_PATH):
@@ -296,7 +280,7 @@ class Launcher(tk.Tk):
     def apply_config_to_bot(self, cfg: dict):
         sound = cfg.get("sound", {})
         if "file" in sound:
-            main.sound_file_path = asset_path(sound["file"])
+            main.sound_file_path = sound["file"]
         if "enabled" in sound:
             main.SOUND_ENABLED = bool(sound["enabled"])
 
@@ -416,7 +400,7 @@ class Launcher(tk.Tk):
 
 
 if __name__ == "__main__":
-    manager = LicenseManager(str((get_runtime_base_dir() / "licenses.db").resolve()))
+    manager = LicenseManager()
     status = manager.get_status()
 
     if not status.is_active:
